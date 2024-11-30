@@ -38,7 +38,7 @@ init_db()
 def index():
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM bins')  # Fetch all bins
+    cursor.execute('SELECT * FROM bins ORDER BY number ASC')
     bins = cursor.fetchall()
     conn.close()
     return render_template('index.html', bins=bins)
