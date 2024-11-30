@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Item</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Edit Item</h1>
+    </header>
+    <div class="container">
+        <form method="post">
+            <input type="hidden" name="bin_id" value="{{ bin_id }}">
+            <div class="form-group">
+                <label for="name">Item Name:</label>
+                <input type="text" id="name" name="name" value="{{ item[1] }}" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" rows="4">{{ item[2] }}</textarea>
+            </div>
+            <button type="submit" class="button">Save Changes</button>
+        </form>
+        <a href="{{ url_for('bin_details', bin_id=bin_id) }}" class="button">Cancel</a>
+    </div>
+</body>
+</html>
