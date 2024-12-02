@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Bin Details</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
@@ -9,18 +10,31 @@
         <h1>Bin {{ bin[1] }}</h1>
     </header>
     <div class="container">
+        <!-- Bin Details -->
         <p><strong>Location:</strong> {{ bin[2] }}</p>
+        
+        <!-- QR Code Display -->
+        <h2>QR Code</h2>
+        {% if bin[3] %}
+            <img src="data:image/png;base64,{{ bin[3] }}" alt="QR Code for Bin {{ bin[1] }}">
+        {% else %}
+            <p>No QR code available for this bin.</p>
+        {% endif %}
+        <p></p>
+        <!-- Action Buttons -->
         <a href="{{ url_for('add_item', bin_id=bin[0]) }}" class="button">Add Item</a>
         <a href="{{ url_for('edit_bin', bin_id=bin[0]) }}" class="button">Edit Bin</a>
         <form method="post" action="{{ url_for('delete_bin', bin_id=bin[0]) }}" style="display:inline;">
             <button type="submit" class="button danger">Delete Bin</button>
         </form>
+
+        <!-- Items in Bin -->
         <h2>Items in Bin</h2>
         <ul class="item-list">
             {% for item in items %}
                 <li>
                     <strong>{{ item[1] }}</strong>
-                    <span>{{ item[2] }}</span>
+                    <span>{{ item[2] }} </span>
                     <a href="{{ url_for('edit_item', item_id=item[0]) }}" class="button">Edit</a>
                     <form method="post" action="{{ url_for('delete_item', item_id=item[0]) }}" style="display:inline;">
                         <button type="submit" class="button danger">Delete</button>
@@ -31,6 +45,8 @@
         {% if not items %}
             <p>No items in this bin.</p>
         {% endif %}
+
+        <!-- Back to Home -->
         <a href="{{ url_for('index') }}" class="button">Back to Bins</a>
     </div>
 </body>
