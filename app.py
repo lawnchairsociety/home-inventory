@@ -1,23 +1,34 @@
+import os
+import base64
+from io import BytesIO
+import qrcode
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# Function to initialize the database and create tables if they don't exist
+# Base URL for the application (used for generating QR codes)
+BASEURL = "http://127.0.0.1:5000" #change this to your own application URL 
+
+# =====================
+# Database Initialization
+# =====================
 def init_db():
+    """
+    Initialize the SQLite database.
+    - Creates tables 'bins' and 'items' if they do not exist.
+    - 'bins': Stores bin information (number, location, and QR code).
+    - 'items': Stores items associated with specific bins.
+    """
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
-    
-    # Create 'bins' table for storing bin information
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS bins (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         number TEXT NOT NULL,
-        location TEXT NOT NULL
+        location TEXT NOT NULL,
+        qr_code TEXT
     )''')
-    
-    # Create 'items' table for storing items inside bins
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,16 +37,23 @@ def init_db():
         bin_id INTEGER,
         FOREIGN KEY (bin_id) REFERENCES bins (id)
     )''')
-    
     conn.commit()
     conn.close()
 
-# Call the database initialization function
+# Initialize the database on application start
 init_db()
 
-# Route for the homepage, displays a list of all bins
+# =====================
+# Routes
+# =====================
+
 @app.route('/')
 def index():
+    """
+    Home page: Displays a list of all bins.
+    - Fetches bins from the database and displays them.
+    - Provides links to view, edit, delete bins, and search for items.
+    """
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM bins ORDER BY number ASC')
@@ -43,92 +61,136 @@ def index():
     conn.close()
     return render_template('index.html', bins=bins)
 
-# Route to display details of a specific bin and its items
 @app.route('/bin/<int:bin_id>')
 def bin_details(bin_id):
+    """
+    Displays details for a specific bin.
+    - Includes the bin's location, QR code, and associated items.
+    - Allows users to add, edit, or delete items in the bin.
+    """
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM bins WHERE id = ?', (bin_id,))  # Fetch bin details
+    cursor.execute('SELECT * FROM bins WHERE id = ?', (bin_id,))
     bin = cursor.fetchone()
-    cursor.execute('SELECT * FROM items WHERE bin_id = ?', (bin_id,))  # Fetch items in the bin
+    cursor.execute('SELECT * FROM items WHERE bin_id = ?', (bin_id,))
     items = cursor.fetchall()
     conn.close()
     return render_template('bin_details.html', bin=bin, items=items)
 
-# Route to add a new bin
 @app.route('/add_bin', methods=['GET', 'POST'])
 def add_bin():
+    """
+    Add a new bin.
+    - Generates a QR code for the bin based on its number and location.
+    - Saves the bin details and QR code in the database.
+    """
     if request.method == 'POST':
-        number = request.form['number']  # Bin number from form
-        location = request.form['location']  # Location from form
+        number = request.form['number']
+        location = request.form['location']
+        
+        # Generate QR code for the bin URL
+        bin_url = f"{BASEURL}/bin/{number}"
+        qr = qrcode.QRCode()
+        qr.add_data(bin_url)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill="black", back_color="white")
+        
+        # Convert QR code to base64
+        buffered = BytesIO()
+        qr_img.save(buffered, format="PNG")
+        qr_code_base64 = base64.b64encode(buffered.getvalue()).decode()
+
+        # Save bin to database
         conn = sqlite3.connect('inventory.db')
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO bins (number, location) VALUES (?, ?)', (number, location))
+        cursor.execute('INSERT INTO bins (number, location, qr_code) VALUES (?, ?, ?)', 
+                       (number, location, qr_code_base64))
         conn.commit()
         conn.close()
-        return redirect(url_for('index'))  # Redirect to homepage
+        return redirect(url_for('index'))
     return render_template('add_bin.html')
 
-# Route to edit a bin
 @app.route('/edit_bin/<int:bin_id>', methods=['GET', 'POST'])
 def edit_bin(bin_id):
+    """
+    Edit an existing bin.
+    - Updates the bin's number, location, and QR code.
+    """
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
-    
     if request.method == 'POST':
-        number = request.form['number']  # Updated bin number
-        location = request.form['location']  # Updated location
-        cursor.execute('UPDATE bins SET number = ?, location = ? WHERE id = ?', (number, location, bin_id))
+        number = request.form['number']
+        location = request.form['location']
+        
+        # Generate updated QR code
+        bin_url = f"{BASEURL}/bin/{number}"
+        qr = qrcode.QRCode()
+        qr.add_data(bin_url)
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill="black", back_color="white")
+        
+        # Convert QR code to base64
+        buffered = BytesIO()
+        qr_img.save(buffered, format="PNG")
+        qr_code_base64 = base64.b64encode(buffered.getvalue()).decode()
+
+        # Update bin in database
+        cursor.execute('UPDATE bins SET number = ?, location = ?, qr_code = ? WHERE id = ?', 
+                       (number, location, qr_code_base64, bin_id))
         conn.commit()
         conn.close()
-        return redirect(url_for('index'))  # Redirect to homepage
-    
+        return redirect(url_for('index'))
     cursor.execute('SELECT * FROM bins WHERE id = ?', (bin_id,))
     bin = cursor.fetchone()
     conn.close()
     return render_template('edit_bin.html', bin=bin)
 
-# Route to delete a bin and its associated items
 @app.route('/delete_bin/<int:bin_id>', methods=['POST'])
 def delete_bin(bin_id):
+    """
+    Delete a bin and all its associated items.
+    """
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM items WHERE bin_id = ?', (bin_id,))  # Delete items in the bin
-    cursor.execute('DELETE FROM bins WHERE id = ?', (bin_id,))  # Delete the bin itself
+    cursor.execute('DELETE FROM items WHERE bin_id = ?', (bin_id,))
+    cursor.execute('DELETE FROM bins WHERE id = ?', (bin_id,))
     conn.commit()
     conn.close()
-    return redirect(url_for('index'))  # Redirect to homepage
+    return redirect(url_for('index'))
 
-# Route to add an item to a specific bin
 @app.route('/add_item/<int:bin_id>', methods=['GET', 'POST'])
 def add_item(bin_id):
+    """
+    Add a new item to a specific bin.
+    """
     if request.method == 'POST':
-        name = request.form['name']  # Item name from form
-        description = request.form['description']  # Item description from form
+        name = request.form['name']
+        description = request.form['description']
         conn = sqlite3.connect('inventory.db')
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO items (name, description, bin_id) VALUES (?, ?, ?)',
+        cursor.execute('INSERT INTO items (name, description, bin_id) VALUES (?, ?, ?)', 
                        (name, description, bin_id))
         conn.commit()
         conn.close()
-        return redirect(url_for('bin_details', bin_id=bin_id))  # Redirect to bin details page
+        return redirect(url_for('bin_details', bin_id=bin_id))
     return render_template('add_item.html', bin_id=bin_id)
 
-# Route to edit an item
 @app.route('/edit_item/<int:item_id>', methods=['GET', 'POST'])
 def edit_item(item_id):
+    """
+    Edit an existing item in a bin.
+    """
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
-    
     if request.method == 'POST':
-        name = request.form['name']  # Updated item name
-        description = request.form['description']  # Updated description
-        cursor.execute('UPDATE items SET name = ?, description = ? WHERE id = ?', (name, description, item_id))
+        name = request.form['name']
+        description = request.form['description']
+        cursor.execute('UPDATE items SET name = ?, description = ? WHERE id = ?', 
+                       (name, description, item_id))
         conn.commit()
         conn.close()
-        bin_id = request.form['bin_id']  # Redirect back to the bin containing the item
+        bin_id = request.form['bin_id']
         return redirect(url_for('bin_details', bin_id=bin_id))
-    
     cursor.execute('SELECT * FROM items WHERE id = ?', (item_id,))
     item = cursor.fetchone()
     cursor.execute('SELECT bin_id FROM items WHERE id = ?', (item_id,))
@@ -136,36 +198,28 @@ def edit_item(item_id):
     conn.close()
     return render_template('edit_item.html', item=item, bin_id=bin_id)
 
-# Route to delete an item
 @app.route('/delete_item/<int:item_id>', methods=['POST'])
 def delete_item(item_id):
+    """
+    Delete an item from a bin.
+    """
     conn = sqlite3.connect('inventory.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT bin_id FROM items WHERE id = ?', (item_id,))  # Get bin ID for redirect
+    cursor.execute('SELECT bin_id FROM items WHERE id = ?', (item_id,))
     bin_id = cursor.fetchone()[0]
-    cursor.execute('DELETE FROM items WHERE id = ?', (item_id,))  # Delete the item
+    cursor.execute('DELETE FROM items WHERE id = ?', (item_id,))
     conn.commit()
     conn.close()
     return redirect(url_for('bin_details', bin_id=bin_id))
 
-# Route to search for bins
-@app.route('/search', methods=['GET', 'POST'])
-def search():
-    if request.method == 'POST':
-        query = request.form['query']  # Search query
-        conn = sqlite3.connect('inventory.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM bins WHERE number LIKE ?", ('%' + query + '%',))
-        bins = cursor.fetchall()
-        conn.close()
-        return render_template('search_results.html', bins=bins, query=query)
-    return redirect(url_for('index'))
-
-# Route to search for items
 @app.route('/search_item', methods=['GET', 'POST'])
 def search_item():
+    """
+    Search for items across all bins.
+    - Returns items matching the search query, along with their associated bin details.
+    """
     if request.method == 'POST':
-        query = request.form['query']  # Search query
+        query = request.form['query']
         conn = sqlite3.connect('inventory.db')
         cursor = conn.cursor()
         cursor.execute('''
@@ -179,6 +233,6 @@ def search_item():
         return render_template('item_search_results.html', results=results, query=query)
     return redirect(url_for('index'))
 
-# Run the Flask app in debug mode
 if __name__ == '__main__':
+    # Run the Flask application in debug mode
     app.run(debug=True)
