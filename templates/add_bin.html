@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Add Bin</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
@@ -10,17 +11,15 @@
     </header>
     <div class="container">
         <form method="post">
-            <div class="form-group">
-                <label for="number">Bin Number:</label>
-                <input type="text" id="number" name="number" required>
-            </div>
-            <div class="form-group">
-                <label for="location">Location:</label>
-                <input type="text" id="location" name="location" required>
-            </div>
+            <label for="number">Bin Number:</label>
+            <input type="text" name="number" id="number" required>
+            <br>
+            <label for="location">Location:</label>
+            <input type="text" name="location" id="location" required>
+            <br>
             <button type="submit" class="button">Add Bin</button>
         </form>
-        <a href="{{ url_for('index') }}" class="button">Cancel</a>
+        <a href="{{ url_for('index') }}" class="button">Back to Home</a>
     </div>
 </body>
 </html>
