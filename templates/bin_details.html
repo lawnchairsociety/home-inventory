@@ -25,7 +25,7 @@
         {% else %}
             <p>No QR code available for this bin.</p>
         {% endif %}
-        
+        <p></p>
         <!-- Action Buttons -->
         <a href="{{ url_for('add_item', bin_id=bin[0]) }}" class="button">Add Item</a>
         <a href="{{ url_for('edit_bin', bin_id=bin[0]) }}" class="button">Edit Bin</a>
