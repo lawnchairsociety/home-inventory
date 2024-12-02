@@ -37,4 +37,7 @@ This project is a simple **Home Inventory Management System** built with **Flask
    ```bash
    git clone https://github.com/sjhilt/home-inventory.git
    cd home-inventory
+   python3 -m venv myenv
+   source myenv/bin/activate
+   pip3 install -r requirements.txt
    python3 -m app
