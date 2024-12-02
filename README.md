@@ -33,7 +33,7 @@ This project is a simple **Home Inventory Management System** built with **Flask
 
 ## Installation
 
-1. Clone the repository:
+1. Clone the repository and run:
    ```bash
    git clone https://github.com/sjhilt/home-inventory.git
    cd home-inventory
