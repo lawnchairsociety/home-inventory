@@ -121,3 +121,83 @@ ul.item-list li strong {
 .item-list li .button {
     margin-left: 10px;
 }
+/* Button styles */
+.button {
+    padding: 8px 15px;
+    text-decoration: none;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.button:hover {
+    background-color: #0056b3;
+}
+
+.button.danger {
+    background-color: #DC3545;
+}
+
+.button.danger:hover {
+    background-color: #A71D2A;
+}
+
+/* Small devices */
+@media (max-width: 480px) {
+    body {
+        font-size: 14px;
+    }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+    body {
+        font-size: 15px;
+    }
+}
+
+/* Medium devices */
+@media (min-width: 769px) and (max-width: 1024px) {
+    body {
+        font-size: 16px;
+    }
+}
+
+/* Large devices */
+@media (min-width: 1025px) and (max-width: 1200px) {
+    body {
+        font-size: 18px;
+    }
+}
+
+/* Extra large devices */
+@media (min-width: 1201px) {
+    body {
+        font-size: 20px;
+    }
+}
+
+/* Flexbox Example */
+.grid-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.grid-item {
+    flex: 1 1 calc(100% - 20px); /* Take full width on small screens */
+}
+
+@media (min-width: 768px) {
+    .grid-item {
+        flex: 1 1 calc(50% - 20px); /* Take half width on medium screens */
+    }
+}
+
+@media (min-width: 1200px) {
+    .grid-item {
+        flex: 1 1 calc(33.33% - 20px); /* Take one-third width on large screens */
+    }
+}
