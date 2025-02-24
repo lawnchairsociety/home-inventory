@@ -88,8 +88,17 @@ def add_bin():
         number = request.form['number']
         location = request.form['location']
         
+        # Save bin to database
+        conn = sqlite3.connect('inventory.db')
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO bins (number, location) VALUES (?, ?)', 
+                       (number, location))
+        conn.commit()
+
+        id = cursor.lastrowid
+        
         # Generate QR code for the bin URL
-        bin_url = f"{BASEURL}/bin/{number}"
+        bin_url = f"{BASEURL}/bin/{id}"
         qr = qrcode.QRCode()
         qr.add_data(bin_url)
         qr.make(fit=True)
@@ -100,13 +109,12 @@ def add_bin():
         qr_img.save(buffered, format="PNG")
         qr_code_base64 = base64.b64encode(buffered.getvalue()).decode()
 
-        # Save bin to database
-        conn = sqlite3.connect('inventory.db')
-        cursor = conn.cursor()
-        cursor.execute('INSERT INTO bins (number, location, qr_code) VALUES (?, ?, ?)', 
-                       (number, location, qr_code_base64))
+        cursor.execute('UPDATE bins SET qr_code = ? WHERE id = ?', 
+                       (qr_code_base64, id))
+
         conn.commit()
         conn.close()
+
         return redirect(url_for('index'))
     return render_template('add_bin.html')
 
