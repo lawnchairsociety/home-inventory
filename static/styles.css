@@ -136,6 +136,20 @@ ul.item-list li strong {
     background-color: #0056b3;
 }
 
+.button.safe {
+    background-color: #66CC00;
+}
+.button.safe:hover {
+    background-color: #66CC33;
+}
+
+.button.warn {
+    background-color: #FFCC33;
+}
+.button.warn:hover {
+    background-color: #FFCC00;
+}
+
 .button.danger {
     background-color: #DC3545;
 }
