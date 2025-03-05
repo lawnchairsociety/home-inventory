@@ -35,8 +35,16 @@ def init_db():
         name TEXT NOT NULL,
         description TEXT,
         bin_id INTEGER,
+        checked_out INTEGER DEFAULT 0,
         FOREIGN KEY (bin_id) REFERENCES bins (id)
     )''')
+
+    cursor.execute("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('items') WHERE name='checked_out'")
+    checkout_count = cursor.fetchone()[0]
+
+    if checkout_count == 0:
+        cursor.execute("ALTER TABLE items ADD COLUMN checked_out INTEGER DEFAULT 0")
+
     conn.commit()
     conn.close()
 
@@ -58,8 +66,14 @@ def index():
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM bins ORDER BY number ASC')
     bins = cursor.fetchall()
+    cursor.execute('''
+            SELECT items.id, items.name, bins.number, bins.location 
+            FROM items 
+            JOIN bins ON items.bin_id = bins.id 
+            WHERE items.checked_out=1''')
+    checked_out_items = cursor.fetchall()
     conn.close()
-    return render_template('index.html', bins=bins)
+    return render_template('index.html', bins=bins, checked_out_items = checked_out_items)
 
 @app.route('/bin/<int:bin_id>')
 def bin_details(bin_id):
@@ -235,11 +249,40 @@ def search_item():
             FROM items 
             JOIN bins ON items.bin_id = bins.id 
             WHERE items.name LIKE ?
-        ''', ('%' + query + '%',))
+            OR items.description LIKE ?
+        ''', ('%' + query + '%', '%' + query + '%'))
         results = cursor.fetchall()
         conn.close()
         return render_template('item_search_results.html', results=results, query=query)
     return redirect(url_for('index'))
+
+@app.route('/item_checkin/<int:item_id>')
+def item_checkin(item_id):
+    """
+    Checks the item back in to the bin
+    """
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT bin_id FROM items WHERE id = ?', (item_id,))
+    bin_id = cursor.fetchone()[0]
+    cursor.execute('UPDATE items SET checked_out=0 WHERE id = ?', (item_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('bin_details', bin_id=bin_id))
+
+@app.route('/item_checkout/<int:item_id>')
+def item_checkout(item_id):
+    """
+    Checks the item back in to the bin
+    """
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT bin_id FROM items WHERE id = ?', (item_id,))
+    bin_id = cursor.fetchone()[0]
+    cursor.execute('UPDATE items SET checked_out=1 WHERE id = ?', (item_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('bin_details', bin_id=bin_id))
 
 if __name__ == '__main__':
     # Run the Flask application in debug mode
